@@ -1,0 +1,483 @@
+#include "iplist.h"
+
+IPList::IPList(QWidget *parent) :
+    QTreeView(parent)
+{
+    iplm = new IPListModel(this);
+    setModel(iplm);
+    expandList();
+
+//    connect(this, SIGNAL(updatedata()), iplm, SLOT(reloadData()));
+    connect(this, &IPList::updatedata, iplm, &IPListModel::reloadData);
+//    connect(iplm, SIGNAL(loadedData()), SLOT(expandList()));
+    connect(iplm, &IPListModel::loadedData, this, &IPList::expandAll);
+    connect(this, SIGNAL(collapsed(QModelIndex)), this, SLOT(expandList()));
+    connect(this, SIGNAL(expanded(QModelIndex)), this, SLOT(expandList()));
+
+    QAction *act1 = new QAction();
+    act1->setText("Add free");
+    act1->setShortcut(QKeySequence(Qt::CTRL+Qt::Key_F));
+    act1->setStatusTip(tr("Add free network"));
+//    connect(act1, SIGNAL(triggered(bool)), SLOT(addFreeNetwork()));
+    connect(act1, &QAction::triggered, this, &IPList::addFreeNetwork);
+    sact.append(act1);
+
+    QAction *act2 = new QAction();
+    act2->setText("Delete free");
+    act2->setShortcut(QKeySequence(Qt::CTRL+Qt::Key_D));
+    act2->setStatusTip(tr("Delete free network"));
+//    connect(act2, SIGNAL(triggered(bool)), SLOT(delFreeNetwork()));
+    connect(act2, &QAction::triggered, this, &IPList::delFreeNetwork);
+    sact.append(act2);
+
+    QAction *act3 = new QAction();
+    act3->setText("Add used");
+    act3->setShortcut(QKeySequence(Qt::CTRL+Qt::Key_U));
+    act3->setStatusTip(tr("Add user network"));
+    connect(act3, SIGNAL(triggered(bool)), SLOT(addUsedNetwork()));
+    sact.append(act3);
+
+    QAction *actd = new QAction();
+    actd->setText("Delete used");
+    actd->setShortcut(QKeySequence(Qt::CTRL+Qt::Key_B));
+    actd->setStatusTip(tr("Delete user network"));
+    connect(actd, SIGNAL(triggered(bool)), SLOT(delUsedNetwork()));
+    sact.append(actd);
+
+    QAction *actf = new QAction();
+    actf->setText("Find Free");
+    actf->setShortcut(QKeySequence(Qt::CTRL+Qt::Key_N));
+    actf->setStatusTip(tr("Find free network"));
+    connect(actf, SIGNAL(triggered(bool)), SLOT(findFreeNetwork()));
+    sact.append(actf);
+
+    QAction *act4 = new QAction();
+    act4->setText("Update description");
+    act4->setShortcut(QKeySequence(Qt::CTRL+Qt::Key_M));
+    act4->setStatusTip(tr("Update description of network"));
+    connect(act4, &QAction::triggered, this, &IPList::updateDescription);
+    sact.append(act4);
+}
+
+void IPList::expandList()
+{
+    qDebug() << "slot expandList()";
+    resizeColumnToContents(0);
+}
+
+void IPList::addFreeNetwork()
+{
+    QSqlQuery q;
+
+    unique_ptr<editFreeNetwork> efn(new editFreeNetwork(this));
+    if (efn->exec()) {
+        if (efn->Network().length() == 0)
+            return;
+        IPNetwork net = efn->Network();
+        qDebug() << net.toString().c_str();
+        QString descr = efn->Description();
+        q.prepare("INSERT INTO ipaddr(addr,descr) VALUES(:addr,:descr)");
+        q.bindValue(":addr", net.toString().c_str());
+        q.bindValue(":descr", descr);
+        if (!q.exec()) {
+            qDebug() << q.lastError() << Qt::endl;
+            return;
+        }
+        emit updatedata();
+    }
+}
+
+bool IPList::deleteNetwork(const Node *n)
+{
+    QSqlQuery q;
+    Transaction tr;
+
+    tr.Begin();
+
+    if (n == nullptr)
+        return true;
+
+    if (n->data->busy) {
+        QMessageBox::critical(this,
+                              "Удаление сети",
+                              QString("Вы не можете удалить сеть %1,\nпоскольку она занята").arg(n->data->net.toString().c_str()));
+        tr.Rollback();
+        return false;
+    }
+
+//    for (uint i = 0; i < n->children.size(); ++i) {
+    for (auto item: n->children) {
+//        if (!deleteNetwork(n->children[i])) {
+        if (deleteNetwork(item)) {
+            tr.Rollback();
+            return false;
+        }
+    }
+
+    q.prepare("DELETE FROM ipaddr WHERE id = :id");
+    q.bindValue(":id", n->data->id);
+    if (!q.exec()) {
+        qDebug() << q.lastError() << Qt::endl;
+        tr.Rollback();
+        return false;
+    }
+
+    delete n;
+
+    tr.Commit();
+    return true;
+}
+
+Node *IPList::get_current()
+{
+    QModelIndex idx = selectionModel()->currentIndex();
+    if (!idx.isValid())
+        return nullptr;
+    Node *n = static_cast<Node*>(idx.internalPointer());
+    return n;
+}
+
+void IPList::delFreeNetwork()
+{
+    Transaction tr;
+
+    Node *n = get_current();
+    if (n == nullptr)
+        return;
+
+    int r = QMessageBox::question(this,
+                                  "Delete data",
+                                  QString("Delete network: %1 - %2\nwith subnets ?").arg(n->data->net.toString().c_str()).arg(n->data->name.toStdString().c_str()));
+    if (r == QMessageBox::Yes) {
+        QSqlQuery q;
+        tr.Begin();
+        if (deleteNetwork(n)) {
+            tr.Commit();
+            emit updatedata();
+        }
+        else
+            tr.Rollback();
+    }
+}
+
+pair<IPAddress,IPAddress> IPList::find_network(const Node *n, IPNetwork &myNet)
+{
+    pair<IPAddress, IPAddress> pr;
+    IPNetwork net;
+
+    foreach (Node *n1, n->children) {
+        if (n1->data->net.Contain(myNet)) {
+            if (n1->data->busy == false) {
+                pr.first = n1->data->net.Network();
+                pr.second = n1->data->net.Broadcast();
+//                net = n1->data->net;
+                delete_network(n1->data->id);
+                return pr;
+            }
+            else {
+                QMessageBox::critical(this,
+                                      "Сеть занята",
+                                      QString("Найденная сеть %1 занята").arg(n1->data->net.toString().c_str()));
+                return pr;
+            }
+        }
+    }
+
+    return pr;
+}
+
+bool IPList::write_new_networks(const pair<IPAddress,IPAddress> &Address, IPNetwork &myNet, const uint parent, const QString &str)
+{
+    pair<IPAddress,IPAddress> pr;
+//    IPAddress faddr = myNet.Broadcast()+1;
+//    IPAddress laddr = myNet.Network()-1;
+
+    pr.first = Address.first;
+    pr.second = myNet.Network()-1;
+    if (!calc_networks(pr, parent))
+        return false;
+
+    if (!write_network(myNet, parent, str, 1))
+        return false;
+
+    pr.first = myNet.Broadcast()+1;
+    pr.second = Address.second;
+    if (!calc_networks(pr, parent))
+        return false;
+
+    return true;
+}
+
+void IPList::addUsedNetwork()
+{
+    uint parent;
+    pair<IPAddress,IPAddress> pr;
+//    IPAddress firstAddress, lastAddress;
+
+    Node *n = get_current();
+    if (n == nullptr)
+        return;
+
+    unique_ptr<editBusyNetwork> efr(new editBusyNetwork(this));
+
+    if (n->data->parent == 0) {
+        if (n->children.size() == 0) {
+            efr->setNetwork(n->data->net.toString().c_str());
+        }
+    }
+    else if (n->data->busy == true) {
+        QMessageBox::critical(this,
+                              "Allocate network",
+                              "This network is busy");
+        return;
+    }
+    else {
+        efr->setNetwork(n->data->net.toString().c_str());
+    }
+
+    if (!efr->exec())
+        return;
+
+    Transaction tr;
+    tr.Begin();
+
+    IPNetwork myNet = efr->Network().toStdString();
+    if (n->data->parent) {
+        if (n->data->busy) {
+            QMessageBox::critical(this,
+                                  "Сеть занята",
+                                  QString("Выбранная сеть %1 занята").arg(n->data->net.toString().c_str()));
+            return;
+        }
+        if (n->data->net.Contain(myNet) == false) {
+            QMessageBox::critical(this,
+                              "Сеть вне диапазона",
+                              QString("Введенная сеть %1 вне диапазона %2").arg(myNet.toString().c_str()).arg(n->data->net.toString().c_str()));
+            return;
+        }
+        delete_network(n->data->id);
+
+        parent = n->parent->data->id;
+        pr.first = n->data->net.Network();
+        pr.second = n->data->net.Broadcast();
+    }
+    else {
+        parent = n->data->id;
+        if (n->children.size() == 0) {
+            pr.first = n->data->net.Network();
+            pr.second = n->data->net.Broadcast();
+        }
+        else {
+//            IPNetwork net;
+            pr = find_network(n, myNet);
+//            pr.first = net.Network();
+//            pr.second = net.Broadcast();
+        }
+    }
+
+    if (pr.first.isNull() || pr.second.isNull())
+        return;
+
+//    pr.first = firstAddress;
+//    pr.second = lastAddress;
+    if (!write_new_networks(pr, myNet, parent, efr->Description()))
+        return;
+
+    tr.Commit();
+
+    emit updatedata();
+}
+
+void IPList::delUsedNetwork()
+{
+    pair<IPAddress,IPAddress> pr;
+//    IPAddress firstAddress, lastAddress;
+    Transaction tr;
+
+    Node *n = get_current();
+    if (n == nullptr)
+        return;
+
+    if (n->data->busy == false) {
+        QMessageBox::critical(this,
+                          "Удаление сети",
+                          QString("Выбранная сеть %1 свободна").arg(n->data->net.toString().c_str()));
+        return;
+    }
+
+    int r = QMessageBox::question(this,
+                                  "Delete network",
+                                  QString("Delete network: %1 - %2?").arg(n->data->net.toString().c_str()).arg(n->data->name));
+    if (r == QMessageBox::Yes) {
+        tr.Begin();
+        pr.first = n->data->net.Network();
+        pr.second = n->data->net.Broadcast();
+        uint idx = 0;
+        bool flag = false;
+        for (uint i = 0; i < n->parent->children.size(); ++i) {
+            if (n->parent->children[i] == n) {
+                idx = i;
+                flag = true;
+                break;
+            }
+        }
+        uint l = idx;
+        uint r = idx;
+        if (flag) {
+            --l;
+            while (n->parent->children[l]->data->busy == false) {
+                pr.first = n->parent->children[l]->data->net.Network();
+                if (delete_network(n->parent->children[l]->data->id) == false)
+                    return;
+                --l;
+            }
+            ++r;
+            while (n->parent->children[r]->data->busy == false) {
+                pr.second = n->parent->children[r]->data->net.Broadcast();
+                if (delete_network(n->parent->children[r]->data->id) == false)
+                    return;
+                ++r;
+            }
+            qDebug() << "delete_network";
+            if (delete_network(n->data->id) == false)
+                return;
+            qDebug() << pr.first.toString().c_str() << pr.second.toString().c_str();
+            if (calc_networks(pr, n->parent->data->id) == false)
+                return;
+        }
+        tr.Commit();
+        emit updatedata();
+    }
+}
+
+bool IPList::calc_networks(const pair<IPAddress,IPAddress> &Address, const uint parent)
+{
+    IPAddress faddr = Address.first;
+
+    while (faddr < Address.second) {
+        uint i = 32;
+        while (i > 0) {
+            IPNetwork net(faddr, i);
+            if (net.Network() != faddr || net.Broadcast() > Address.second) {
+                IPNetwork net2(faddr, i+1);
+                if (!write_network(net2, parent, "Free", 0))
+                    return false;
+                faddr = net2.Broadcast()+1;
+                break;
+            }
+            i--;
+        }
+        if (i <= 0) {
+            break;
+        }
+    }
+
+    return true;
+}
+
+bool IPList::write_network(IPNetwork &net, const uint parent, const QString &descr, const int busy)
+{
+    QSqlQuery q;
+
+//    qDebug() << net.toString();
+    q.prepare("INSERT INTO  ipaddr(addr,parent,descr, busy) VALUES(:addr,:parent,:descr,:busy)");
+    q.bindValue(":addr", net.toString().c_str());
+    q.bindValue(":parent", parent);
+    q.bindValue(":descr", descr);
+    q.bindValue(":busy", busy);
+    if (!q.exec()) {
+        qDebug() << q.lastError() << Qt::endl;
+        return false;
+    }
+//    emit updatedata();
+    return true;
+}
+
+bool IPList::delete_network(const uint id)
+{
+    QSqlQuery q;
+
+    q.prepare("DELETE FROM ipaddr WHERE id = :id");
+    q.bindValue(":id", id);
+    if (!q.exec()) {
+        qDebug() << q.lastError() << Qt::endl;
+        return false;
+    }
+    return true;
+}
+
+void IPList::findFreeNetwork()
+{
+    Node *n = get_current();
+    if (n == nullptr)
+        return;
+
+    unique_ptr<editSizeNetwork> esn(new editSizeNetwork(this));
+    if (esn->exec() == false)
+        return;
+
+    int bits = esn->Value();
+    uint size = 1 << (32-bits);
+    uint min = 0;
+    Node *mn = nullptr;
+    foreach (Node *n1, n->children) {
+        if (n1->data->net.size() < size || n1->data->busy == true)
+            continue;
+        if (min == 0 || min > n1->data->net.size()) {
+            min = n1->data->net.size();
+            mn = n1;
+        }
+    }
+
+    if (min == 0) {
+        QMessageBox::critical(this,
+                          "Поиск сети",
+                          QString("Свободная сеть размером %1 бит не найдена").arg(bits));
+        return;
+    }
+
+    unique_ptr<editBusyNetwork> ebn(new editBusyNetwork(this));
+    QString str = QString("%1/%2").arg(mn->data->net.Network().toString().c_str()).arg(bits);
+    ebn->setNetwork(str);
+    if (!ebn->exec())
+        return;
+
+    Transaction tr;
+    tr.Begin();
+
+    IPNetwork myNet(str.toStdString());
+    pair<IPAddress,IPAddress> la = find_network(n, myNet);
+    IPAddress firstAddress = la.first;
+    IPAddress lastAddress = la.second;
+
+    if (firstAddress.isNull() || lastAddress.isNull())
+        return;
+
+    if (!write_new_networks(la, myNet, n->data->id, ebn->Description()))
+        return;
+
+    tr.Commit();
+}
+
+void IPList::updateDescription()
+{
+    Node *n = get_current();
+    if (n == nullptr)
+        return;
+
+    unique_ptr<editBusyNetwork> net(new editBusyNetwork(this));
+    net->hideNetwork();
+    net->setNetwork(n->data->net.toString().c_str());
+    net->setDescription(n->data->name);
+    if (net->exec()) {
+        QSqlQuery q;
+        q.prepare("UPDATE ipaddr SET descr = :name WHERE id = :id");
+        q.bindValue(":id", n->data->id);
+        q.bindValue(":name", net->Description());
+        if (!q.exec()) {
+            qDebug() << q.lastError() << Qt::endl;
+            return;
+        }
+    }
+    emit updatedata();
+}
