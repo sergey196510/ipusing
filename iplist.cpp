@@ -325,7 +325,7 @@ void IPList::delUsedNetwork()
         uint r = idx;
         if (flag) {
             --l;
-            while (n->parent->children[l]->data->busy == false) {
+            while (l < idx && n->parent->children[l]->data->busy == false) {
                 pr.first = n->parent->children[l]->data->net.Network();
                 if (delete_network(n->parent->children[l]->data->id) == false)
                     return;
