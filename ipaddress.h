@@ -15,7 +15,7 @@ class IPAddress
 public:
     IPAddress(const uint value = 0);
     IPAddress(const string &value);
-    IPAddress operator =(const IPAddress &str);
+//    IPAddress operator =(const IPAddress &str);
     IPAddress operator +=(const uint value);
     IPAddress operator +(const uint value);
     IPAddress operator -(const uint value);

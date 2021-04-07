@@ -26,11 +26,11 @@ IPAddress::IPAddress(const string &value)
     }
 }
 
-IPAddress IPAddress::operator =(const IPAddress &a)
-{
-    addr = a.addr;
-    return *this;
-}
+//IPAddress IPAddress::operator =(const IPAddress &a)
+//{
+//    addr = a.addr;
+//    return *this;
+//}
 
 IPAddress IPAddress::operator +=(const uint value)
 {

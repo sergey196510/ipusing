@@ -94,9 +94,22 @@ bool IPNetwork::Contain(IPNetwork &net)
 
 bool IPNetwork::Crossing(IPNetwork &net)
 {
-    if (Broadcast() < net.Network() || Network() > net.Broadcast())
-        return false;
-    return true;
+    uint a = Network().toInt();
+    uint b = Broadcast().toInt();
+    uint c = net.Network().toInt();
+    uint d = net.Broadcast().toInt();
+
+    if (a >= c && a <= d)
+        return true;
+    else if (b >= c && b <= d)
+        return true;
+
+    else if (c >= a && c <= b)
+        return true;
+    else if (d >= a && d <= b)
+        return true;
+
+    return false;
 }
 
 int CountOnes2_FF(uint n)

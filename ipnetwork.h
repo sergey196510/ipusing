@@ -1,7 +1,7 @@
 #ifndef IPNETWORK_H
 #define IPNETWORK_H
 
-//#include <QtCore>
+#include <QtCore>
 #include <algorithm>
 #include "ipaddress.h"
 

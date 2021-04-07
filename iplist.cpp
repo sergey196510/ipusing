@@ -80,7 +80,7 @@ void IPList::addFreeNetwork()
         q.bindValue(":addr", net.toString().c_str());
         q.bindValue(":descr", descr);
         if (!q.exec()) {
-            qDebug() << q.lastError() << Qt::endl;
+            qDebug() << q.lastError() << "\n";
             return;
         }
         emit updatedata();
@@ -117,7 +117,7 @@ bool IPList::deleteNetwork(const Node *n)
     q.prepare("DELETE FROM ipaddr WHERE id = :id");
     q.bindValue(":id", n->data->id);
     if (!q.exec()) {
-        qDebug() << q.lastError() << Qt::endl;
+        qDebug() << q.lastError() << "\n";
         tr.Rollback();
         return false;
     }
@@ -298,6 +298,8 @@ void IPList::delUsedNetwork()
     if (n == nullptr)
         return;
 
+    Node *p = n->parent;
+
     if (n->data->busy == false) {
         QMessageBox::critical(this,
                           "Удаление сети",
@@ -309,13 +311,15 @@ void IPList::delUsedNetwork()
                                   "Delete network",
                                   QString("Delete network: %1 - %2?").arg(n->data->net.toString().c_str()).arg(n->data->name));
     if (r == QMessageBox::Yes) {
-        std::vector<Node> cn, idx, l, r;
+        std::vector<Node*>::iterator cn, idx, l, r;
         tr.Begin();
         pr.first = n->data->net.Network();
         pr.second = n->data->net.Broadcast();
         bool flag = false;
-#        for (uint i = 0; i < n->parent->children.size(); ++i) {
+
+//        for (uint i = 0; i < n->parent->children.size(); ++i) {
         for (cn = n->parent->children.begin(); cn != n->parent->children.end(); ++cn) {
+//        for (Node *cn: parent->children) {
             if (*cn == n) {
                 idx = cn;
                 flag = true;
@@ -325,20 +329,39 @@ void IPList::delUsedNetwork()
         l = idx;
         r = idx;
         if (flag) {
-            --l;
-            while (l < idx && n->parent->children[l]->data->busy == false) {
-                pr.first = n->parent->children[l]->data->net.Network();
-                if (delete_network(n->parent->children[l]->data->id) == false)
-                    return;
-                --l;
+
+            if (l == p->children.begin()) {
+                pr.first = n->data->net.Network();
             }
-            ++r;
-            while (n->parent->children[r]->data->busy == false) {
-                pr.second = n->parent->children[r]->data->net.Broadcast();
-                if (delete_network(n->parent->children[r]->data->id) == false)
-                    return;
+            else {
+                do {
+                    --l;
+                    Node *tmp = *l;
+                    qDebug() << tmp->data->net.Network().toString().c_str();
+                    if (tmp->data->busy == true)
+                        break;
+                    pr.first = tmp->data->net.Network();
+                    if (delete_network(tmp->data->id) == false)
+                        return;
+                } while (l != p->children.begin());
+            }
+
+            if (r == p->children.end()-1) {
+                pr.second = n->data->net.Broadcast();
+            }
+            else {
                 ++r;
+                while (r != p->children.end()) {
+                    Node *tmp = *r;
+                    if (tmp->data->busy == true)
+                        break;
+                    pr.second = tmp->data->net.Broadcast();
+                    if (delete_network(tmp->data->id) == false)
+                        return;
+                    ++r;
+                }
             }
+
             qDebug() << "delete_network";
             if (delete_network(n->data->id) == false)
                 return;
@@ -387,7 +410,7 @@ bool IPList::write_network(IPNetwork &net, const uint parent, const QString &des
     q.bindValue(":descr", descr);
     q.bindValue(":busy", busy);
     if (!q.exec()) {
-        qDebug() << q.lastError() << Qt::endl;
+        qDebug() << q.lastError() << "\n";
         return false;
     }
 //    emit updatedata();
@@ -401,7 +424,7 @@ bool IPList::delete_network(const uint id)
     q.prepare("DELETE FROM ipaddr WHERE id = :id");
     q.bindValue(":id", id);
     if (!q.exec()) {
-        qDebug() << q.lastError() << Qt::endl;
+        qDebug() << q.lastError() << "\n";
         return false;
     }
     return true;
@@ -476,7 +499,7 @@ void IPList::updateDescription()
         q.bindValue(":id", n->data->id);
         q.bindValue(":name", net->Description());
         if (!q.exec()) {
-            qDebug() << q.lastError() << Qt::endl;
+            qDebug() << q.lastError() << "\n";
             return;
         }
     }
