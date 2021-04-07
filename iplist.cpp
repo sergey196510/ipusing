@@ -146,8 +146,8 @@ void IPList::delFreeNetwork()
         return;
 
     int r = QMessageBox::question(this,
-                                  "Delete data",
-                                  QString("Delete network: %1 - %2\nwith subnets ?").arg(n->data->net.toString().c_str()).arg(n->data->name.toStdString().c_str()));
+                                  "Удаление сети",
+                                  QString("Удаление сети: %1 - %2\nс подсетями?").arg(n->data->net.toString().c_str()).arg(n->data->name.toStdString().c_str()));
     if (r == QMessageBox::Yes) {
         QSqlQuery q;
         tr.Begin();
