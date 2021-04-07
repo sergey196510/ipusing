@@ -309,20 +309,21 @@ void IPList::delUsedNetwork()
                                   "Delete network",
                                   QString("Delete network: %1 - %2?").arg(n->data->net.toString().c_str()).arg(n->data->name));
     if (r == QMessageBox::Yes) {
+        std::vector<Node> cn, idx, l, r;
         tr.Begin();
         pr.first = n->data->net.Network();
         pr.second = n->data->net.Broadcast();
-        uint idx = 0;
         bool flag = false;
-        for (uint i = 0; i < n->parent->children.size(); ++i) {
-            if (n->parent->children[i] == n) {
-                idx = i;
+#        for (uint i = 0; i < n->parent->children.size(); ++i) {
+        for (cn = n->parent->children.begin(); cn != n->parent->children.end(); ++cn) {
+            if (*cn == n) {
+                idx = cn;
                 flag = true;
                 break;
             }
         }
-        uint l = idx;
-        uint r = idx;
+        l = idx;
+        r = idx;
         if (flag) {
             --l;
             while (l < idx && n->parent->children[l]->data->busy == false) {
