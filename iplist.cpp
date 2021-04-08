@@ -165,7 +165,7 @@ pair<IPAddress,IPAddress> IPList::find_network(const Node *n, IPNetwork &myNet)
     pair<IPAddress, IPAddress> pr;
     IPNetwork net;
 
-    foreach (Node *n1, n->children) {
+    for (Node *n1: n->children) {
         if (n1->data->net.Contain(myNet)) {
             if (n1->data->busy == false) {
                 pr.first = n1->data->net.Network();

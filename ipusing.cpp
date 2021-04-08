@@ -22,8 +22,10 @@ IPUsing::IPUsing(QWidget *parent) :
             createdb = true;
     }
 
+    dbname = "ipusing.db";
+
     db = QSqlDatabase::addDatabase("QSQLITE");
-    db.setDatabaseName("ipusing.db");
+    db.setDatabaseName(dbname);
     if (!db.open()) {
         qDebug() << db.lastError();
         exit(1);
@@ -37,10 +39,21 @@ IPUsing::IPUsing(QWidget *parent) :
 
     connect(ui->menuHelp, SIGNAL(triggered(QAction*)), qApp, SLOT(aboutQt()));
     connect(ui->action_Quit, SIGNAL(triggered(bool)), qApp, SLOT(quit()));
+    connect(ui->action_Setting, SIGNAL(triggered(bool)), SLOT(settings()));
 
     ipl = new IPList(this);
     ui->mainToolBar->addActions(ipl->sact);
     setCentralWidget(ipl);
+}
+
+void IPUsing::settings(QWidget *parent)
+{
+    Settings *s = new Settings(this, dbname);
+
+    s->exec();
+    qDebug() << s->DbName() << "\n";
+
+    delete s;
 }
 
 IPUsing::~IPUsing()

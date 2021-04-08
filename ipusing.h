@@ -1,6 +1,7 @@
 #ifndef IPUSING_H
 #define IPUSING_H
 
+#include <QObject>
 #include <QMainWindow>
 #include <QtSql/QSqlDatabase>
 #include <QtSql>
@@ -8,6 +9,7 @@
 #include "iplist.h"
 #include "ipnetwork.h"
 #include "editfreenetwork.h"
+#include "settings.h"
 
 namespace Ui {
 class IPUsing;
@@ -21,10 +23,15 @@ public:
     explicit IPUsing(QWidget *parent = nullptr);
     ~IPUsing();
 
+public slots:
+    void settings(QWidget *parent = nullptr);
+
 private:
     QSqlDatabase db;
     Ui::IPUsing *ui;
     IPList *ipl;
+    Settings *st;
+    QString dbname;
 };
 
 #endif // IPUSING_H

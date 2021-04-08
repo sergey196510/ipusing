@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-CONFIG += c++14
+CONFIG += c++17
 
 QT       += core gui sql
 
@@ -34,6 +34,7 @@ SOURCES += \
     ipnetwork.cpp \
     ipaddress.cpp \
     editfreenetwork.cpp \
+    settings.cpp \
     transaction.cpp \
     editbusynetwork.cpp \
     editsizenetwork.cpp
@@ -46,6 +47,7 @@ HEADERS += \
     ipnetwork.h \
     ipaddress.h \
     editfreenetwork.h \
+    settings.h \
     transaction.h \
     editbusynetwork.h \
     editsizenetwork.h
@@ -54,4 +56,5 @@ FORMS += \
         ipusing.ui \
     editfreenetwork.ui \
     editbusynetwork.ui \
-    editsizenetwork.ui
+    editsizenetwork.ui \
+    settings.ui
