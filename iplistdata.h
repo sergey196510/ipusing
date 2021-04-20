@@ -2,6 +2,7 @@
 #define IPLISTDATA_H
 
 #include <QObject>
+#include <QtSql>
 #include <vector>
 #include "ipnetwork.h"
 
@@ -15,6 +16,10 @@ struct IPData {
     QString name;
 public:
     IPData();
+    bool Add();
+    bool Update();
+    bool Get();
+    bool Remove();
 //    uint Id() { return id; }
 //    uint Parent() { return parent; }
 //    bool Busy() { return busy; }

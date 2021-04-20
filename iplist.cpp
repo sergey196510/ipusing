@@ -105,19 +105,14 @@ bool IPList::deleteNetwork(const Node *n)
         return false;
     }
 
-//    for (uint i = 0; i < n->children.size(); ++i) {
     for (auto item: n->children) {
-//        if (!deleteNetwork(n->children[i])) {
         if (deleteNetwork(item)) {
             tr.Rollback();
             return false;
         }
     }
 
-    q.prepare("DELETE FROM ipaddr WHERE id = :id");
-    q.bindValue(":id", n->data->id);
-    if (!q.exec()) {
-        qDebug() << q.lastError() << "\n";
+    if (n->data->Remove() == false) {
         tr.Rollback();
         return false;
     }
@@ -171,7 +166,8 @@ pair<IPAddress,IPAddress> IPList::find_network(const Node *n, IPNetwork &myNet)
                 pr.first = n1->data->net.Network();
                 pr.second = n1->data->net.Broadcast();
 //                net = n1->data->net;
-                delete_network(n1->data->id);
+//                delete_network(n1->data->id);
+                n1->data->Remove();
                 return pr;
             }
             else {
@@ -189,8 +185,6 @@ pair<IPAddress,IPAddress> IPList::find_network(const Node *n, IPNetwork &myNet)
 bool IPList::write_new_networks(const pair<IPAddress,IPAddress> &Address, IPNetwork &myNet, const uint parent, const QString &str)
 {
     pair<IPAddress,IPAddress> pr;
-//    IPAddress faddr = myNet.Broadcast()+1;
-//    IPAddress laddr = myNet.Network()-1;
 
     pr.first = Address.first;
     pr.second = myNet.Network()-1;
@@ -212,7 +206,6 @@ void IPList::addUsedNetwork()
 {
     uint parent;
     pair<IPAddress,IPAddress> pr;
-//    IPAddress firstAddress, lastAddress;
 
     Node *n = get_current();
     if (n == nullptr)
@@ -242,6 +235,14 @@ void IPList::addUsedNetwork()
     tr.Begin();
 
     IPNetwork myNet = efr->Network().toStdString();
+
+    if (n->data->net.Contain(myNet) == false) {
+        QMessageBox::critical(this,
+                          "Сеть вне диапазона",
+                          QString("Введенная сеть %1 вне диапазона %2").arg(myNet.toString().c_str()).arg(n->data->net.toString().c_str()));
+        return;
+    }
+
     if (n->data->parent) {
         if (n->data->busy) {
             QMessageBox::critical(this,
@@ -249,13 +250,8 @@ void IPList::addUsedNetwork()
                                   QString("Выбранная сеть %1 занята").arg(n->data->net.toString().c_str()));
             return;
         }
-        if (n->data->net.Contain(myNet) == false) {
-            QMessageBox::critical(this,
-                              "Сеть вне диапазона",
-                              QString("Введенная сеть %1 вне диапазона %2").arg(myNet.toString().c_str()).arg(n->data->net.toString().c_str()));
-            return;
-        }
-        delete_network(n->data->id);
+        //delete_network(n->data->id);
+        n->data->Remove();
 
         parent = n->parent->data->id;
         pr.first = n->data->net.Network();
@@ -341,7 +337,8 @@ void IPList::delUsedNetwork()
                     if (tmp->data->busy == true)
                         break;
                     pr.first = tmp->data->net.Network();
-                    if (delete_network(tmp->data->id) == false)
+//                    if (delete_network(tmp->data->id) == false)
+                    if (tmp->data->Remove() == false)
                         return;
                 } while (l != p->children.begin());
             }
@@ -356,14 +353,16 @@ void IPList::delUsedNetwork()
                     if (tmp->data->busy == true)
                         break;
                     pr.second = tmp->data->net.Broadcast();
-                    if (delete_network(tmp->data->id) == false)
+//                    if (delete_network(tmp->data->id) == false)
+                    if (tmp->data->Remove() == false)
                         return;
                     ++r;
                 }
             }
 
             qDebug() << "delete_network";
-            if (delete_network(n->data->id) == false)
+//            if (delete_network(n->data->id) == false)
+            if (n->data->Remove() == false)
                 return;
             qDebug() << pr.first.toString().c_str() << pr.second.toString().c_str();
             if (calc_networks(pr, n->parent->data->id) == false)
@@ -377,11 +376,13 @@ void IPList::delUsedNetwork()
 bool IPList::calc_networks(const pair<IPAddress,IPAddress> &Address, const uint parent)
 {
     IPAddress faddr = Address.first;
+    IPAddress laddr = Address.second;
 
     while (faddr < Address.second) {
         uint i = 32;
         while (i > 0) {
             IPNetwork net(faddr, i);
+            qDebug() << net.Network().toString().c_str() << i << net.Broadcast().toString().c_str() << laddr.toString().c_str() << "\n";
             if (net.Network() != faddr || net.Broadcast() > Address.second) {
                 IPNetwork net2(faddr, i+1);
                 if (!write_network(net2, parent, "Free", 0))
@@ -417,6 +418,7 @@ bool IPList::write_network(IPNetwork &net, const uint parent, const QString &des
     return true;
 }
 
+/*
 bool IPList::delete_network(const uint id)
 {
     QSqlQuery q;
@@ -429,6 +431,7 @@ bool IPList::delete_network(const uint id)
     }
     return true;
 }
+*/
 
 void IPList::findFreeNetwork()
 {
@@ -493,15 +496,11 @@ void IPList::updateDescription()
     net->hideNetwork();
     net->setNetwork(n->data->net.toString().c_str());
     net->setDescription(n->data->name);
+
     if (net->exec()) {
-        QSqlQuery q;
-        q.prepare("UPDATE ipaddr SET descr = :name WHERE id = :id");
-        q.bindValue(":id", n->data->id);
-        q.bindValue(":name", net->Description());
-        if (!q.exec()) {
-            qDebug() << q.lastError() << "\n";
-            return;
-        }
+        n->data->name = net->Description();
+        n->data->Update();
     }
+
     emit updatedata();
 }
