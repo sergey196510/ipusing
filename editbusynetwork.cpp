@@ -6,6 +6,8 @@ editBusyNetwork::editBusyNetwork(QWidget *parent) :
     ui(new Ui::editBusyNetwork)
 {
     ui->setupUi(this);
+
+    connect(ui->networkEdit, SIGNAL(editingFinished()), SLOT(checkAddress()));
 }
 
 editBusyNetwork::~editBusyNetwork()
@@ -36,4 +38,9 @@ QString editBusyNetwork::Description()
 void editBusyNetwork::hideNetwork()
 {
     ui->networkEdit->setEnabled(false);
+}
+
+void editBusyNetwork::checkAddress()
+{
+    qDebug() << "check address:" << ui->networkEdit->text();
 }

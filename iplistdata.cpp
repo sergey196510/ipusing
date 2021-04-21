@@ -37,6 +37,8 @@ bool IPData::Remove()
     if (id == 0)
         return false;
 
+    qDebug() << "Remove network:" << net.toString().c_str();
+
     q.prepare("DELETE FROM ipaddr WHERE id = :id");
     q.bindValue(":id", id);
     if (!q.exec()) {

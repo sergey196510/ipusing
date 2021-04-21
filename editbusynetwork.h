@@ -2,6 +2,7 @@
 #define EDITBUSYNETWORK_H
 
 #include <QDialog>
+#include "ipnetwork.h"
 
 namespace Ui {
 class editBusyNetwork;
@@ -19,6 +20,9 @@ public:
     QString Network();
     QString Description();
     void hideNetwork();
+
+public slots:
+    void checkAddress();
 
 private:
     Ui::editBusyNetwork *ui;

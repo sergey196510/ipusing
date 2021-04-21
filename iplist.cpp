@@ -342,6 +342,8 @@ void IPList::delUsedNetwork()
                         return;
                 } while (l != p->children.begin());
             }
+            IPAddress tmp = pr.first;
+            qDebug() << "Left address:" << tmp.toString().c_str();
 
             if (r == p->children.end()-1) {
                 pr.second = n->data->net.Broadcast();
@@ -359,6 +361,8 @@ void IPList::delUsedNetwork()
                     ++r;
                 }
             }
+            tmp = pr.second;
+            qDebug() << "Last address:" << tmp.toString().c_str();
 
             qDebug() << "delete_network";
 //            if (delete_network(n->data->id) == false)
@@ -382,7 +386,7 @@ bool IPList::calc_networks(const pair<IPAddress,IPAddress> &Address, const uint 
         uint i = 32;
         while (i > 0) {
             IPNetwork net(faddr, i);
-            qDebug() << net.Network().toString().c_str() << i << net.Broadcast().toString().c_str() << laddr.toString().c_str() << "\n";
+            qDebug() << net.Network().toString().c_str() << i << net.Broadcast().toString().c_str() << laddr.toString().c_str();
             if (net.Network() != faddr || net.Broadcast() > Address.second) {
                 IPNetwork net2(faddr, i+1);
                 if (!write_network(net2, parent, "Free", 0))
@@ -404,7 +408,7 @@ bool IPList::write_network(IPNetwork &net, const uint parent, const QString &des
 {
     QSqlQuery q;
 
-//    qDebug() << net.toString();
+    qDebug() << "Write network:" << net.toString().c_str();
     q.prepare("INSERT INTO  ipaddr(addr,parent,descr, busy) VALUES(:addr,:parent,:descr,:busy)");
     q.bindValue(":addr", net.toString().c_str());
     q.bindValue(":parent", parent);
