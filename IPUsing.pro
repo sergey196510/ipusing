@@ -33,7 +33,6 @@ SOURCES += \
     iplistmodel.cpp \
     ipnetwork.cpp \
     ipaddress.cpp \
-    editfreenetwork.cpp \
     settings.cpp \
     transaction.cpp \
     editbusynetwork.cpp \
@@ -46,7 +45,6 @@ HEADERS += \
     iplistmodel.h \
     ipnetwork.h \
     ipaddress.h \
-    editfreenetwork.h \
     settings.h \
     transaction.h \
     editbusynetwork.h \
@@ -54,7 +52,6 @@ HEADERS += \
 
 FORMS += \
         ipusing.ui \
-    editfreenetwork.ui \
     editbusynetwork.ui \
     editsizenetwork.ui \
     settings.ui

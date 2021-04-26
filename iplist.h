@@ -11,7 +11,6 @@
 #include <QtSql>
 //#include <QPair>
 #include "iplistmodel.h"
-#include "editfreenetwork.h"
 #include "editbusynetwork.h"
 #include "editsizenetwork.h"
 #include "transaction.h"

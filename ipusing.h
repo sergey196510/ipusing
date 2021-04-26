@@ -8,7 +8,6 @@
 #include <QSettings>
 #include "iplist.h"
 #include "ipnetwork.h"
-#include "editfreenetwork.h"
 #include "settings.h"
 
 namespace Ui {

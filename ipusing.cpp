@@ -33,8 +33,7 @@ IPUsing::IPUsing(QWidget *parent) :
 
     if (createdb == true) {
         QSqlQuery q;
-        q.prepare("create table ipaddr(id integer primary key autoincrement, parent integer default 0, busy integer default 0, addr text, descr text)");
-        q.exec();
+        q.exec("create table ipaddr(id integer primary key autoincrement, parent integer default 0, busy integer default 0, addr text, descr text)");
     }
 
     connect(ui->menuHelp, SIGNAL(triggered(QAction*)), qApp, SLOT(aboutQt()));

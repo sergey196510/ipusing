@@ -70,11 +70,11 @@ void IPList::addFreeNetwork()
 {
     QSqlQuery q;
 
-    unique_ptr<editFreeNetwork> efn(new editFreeNetwork(this));
+    unique_ptr<editBusyNetwork> efn(new editBusyNetwork(this));
     if (efn->exec()) {
         if (efn->Network().length() == 0)
             return;
-        IPNetwork net = efn->Network();
+        IPNetwork net = efn->Network().toStdString();
         qDebug() << net.toString().c_str();
         QString descr = efn->Description();
 
