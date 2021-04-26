@@ -7,6 +7,23 @@ IPData::IPData() :
 {
 }
 
+bool IPData::Add()
+{
+    QSqlQuery q;
+
+    q.prepare("INSERT INTO ipaddr(descr,parent,busy,addr) VALUES(:name,:parent,:busy,:addr)");
+    q.bindValue(":name", name);
+    q.bindValue(":parent", parent);
+    q.bindValue(":busy", busy);
+    q.bindValue(":addr", net.toString().c_str());
+    if (!q.exec()) {
+        qDebug() << "insert network:" << q.lastError();
+        return false;
+    }
+
+    return true;
+}
+
 bool IPData::Get()
 {
     QSqlQuery q;

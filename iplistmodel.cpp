@@ -95,9 +95,11 @@ QModelIndex IPListModel::parent(const QModelIndex &child) const
 
 void IPListModel::clear(Node *p)
 {
-    for (uint i = 0; i < p->children.size(); ++i) {
-        clear(p->children.at(i));
-    }
+//    for (uint i = 0; i < p->children.size(); ++i) {
+//        clear(p->children.at(i));
+//    }
+    for (auto item: p->children)
+	clear(item);
     p->children.clear();
     delete p->data;
     delete p;
@@ -142,7 +144,7 @@ void IPListModel::read_data(Node *p, const uint parent)
 
     if (parent == 0) {
         emit loadedData();
-        qDebug() << "Signal loadedData()";
+//        qDebug() << "Signal loadedData()";
     }
 }
 

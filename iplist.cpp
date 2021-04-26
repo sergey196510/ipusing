@@ -5,7 +5,7 @@ IPList::IPList(QWidget *parent) :
 {
     iplm = new IPListModel(this);
     setModel(iplm);
-    expandList();
+//    expandList();
 
 //    connect(this, SIGNAL(updatedata()), iplm, SLOT(reloadData()));
     connect(this, &IPList::updatedata, iplm, &IPListModel::reloadData);
@@ -22,13 +22,13 @@ IPList::IPList(QWidget *parent) :
     connect(act1, &QAction::triggered, this, &IPList::addFreeNetwork);
     sact.append(act1);
 
-    QAction *act2 = new QAction();
-    act2->setText("Delete free");
-    act2->setShortcut(QKeySequence(Qt::CTRL+Qt::Key_D));
-    act2->setStatusTip(tr("Delete free network"));
+//    QAction *act2 = new QAction();
+//    act2->setText("Delete free");
+//    act2->setShortcut(QKeySequence(Qt::CTRL+Qt::Key_D));
+//    act2->setStatusTip(tr("Delete free network"));
 //    connect(act2, SIGNAL(triggered(bool)), SLOT(delFreeNetwork()));
-    connect(act2, &QAction::triggered, this, &IPList::delFreeNetwork);
-    sact.append(act2);
+//    connect(act2, &QAction::triggered, this, &IPList::delFreeNetwork);
+//    sact.append(act2);
 
     QAction *act3 = new QAction();
     act3->setText("Add used");
@@ -61,8 +61,9 @@ IPList::IPList(QWidget *parent) :
 
 void IPList::expandList()
 {
-    qDebug() << "slot expandList()";
+//    qDebug() << "slot expandList()";
     resizeColumnToContents(0);
+    expandAll();
 }
 
 void IPList::addFreeNetwork()
@@ -76,17 +77,25 @@ void IPList::addFreeNetwork()
         IPNetwork net = efn->Network();
         qDebug() << net.toString().c_str();
         QString descr = efn->Description();
-        q.prepare("INSERT INTO ipaddr(addr,descr) VALUES(:addr,:descr)");
-        q.bindValue(":addr", net.toString().c_str());
-        q.bindValue(":descr", descr);
-        if (!q.exec()) {
-            qDebug() << q.lastError() << "\n";
-            return;
-        }
+
+        IPData d;
+        d.net = net.toString().c_str();
+        d.name = descr;
+        d.Add();
+
+//        q.prepare("INSERT INTO ipaddr(addr,descr) VALUES(:addr,:descr)");
+//        q.bindValue(":addr", net.toString().c_str());
+//        q.bindValue(":descr", descr);
+//        if (!q.exec()) {
+//            qDebug() << q.lastError() << "\n";
+//            return;
+//        }
+
         emit updatedata();
     }
 }
 
+/*
 bool IPList::deleteNetwork(const Node *n)
 {
     QSqlQuery q;
@@ -122,6 +131,7 @@ bool IPList::deleteNetwork(const Node *n)
     tr.Commit();
     return true;
 }
+*/
 
 Node *IPList::get_current()
 {
@@ -132,6 +142,7 @@ Node *IPList::get_current()
     return n;
 }
 
+/*
 void IPList::delFreeNetwork()
 {
     Transaction tr;
@@ -154,6 +165,7 @@ void IPList::delFreeNetwork()
             tr.Rollback();
     }
 }
+*/
 
 pair<IPAddress,IPAddress> IPList::find_network(const Node *n, IPNetwork &myNet)
 {
@@ -406,20 +418,28 @@ bool IPList::calc_networks(const pair<IPAddress,IPAddress> &Address, const uint 
 
 bool IPList::write_network(IPNetwork &net, const uint parent, const QString &descr, const int busy)
 {
-    QSqlQuery q;
+    IPData d;
 
-    qDebug() << "Write network:" << net.toString().c_str();
-    q.prepare("INSERT INTO  ipaddr(addr,parent,descr, busy) VALUES(:addr,:parent,:descr,:busy)");
-    q.bindValue(":addr", net.toString().c_str());
-    q.bindValue(":parent", parent);
-    q.bindValue(":descr", descr);
-    q.bindValue(":busy", busy);
-    if (!q.exec()) {
-        qDebug() << q.lastError() << "\n";
-        return false;
-    }
+    d.name = descr;
+    d.parent = parent;
+    d.busy = busy;
+    d.net = net.toString().c_str();
+    return d.Add();
+
+//    QSqlQuery q;
+
+//    qDebug() << "Write network:" << net.toString().c_str();
+//    q.prepare("INSERT INTO  ipaddr(addr,parent,descr, busy) VALUES(:addr,:parent,:descr,:busy)");
+//    q.bindValue(":addr", net.toString().c_str());
+//    q.bindValue(":parent", parent);
+//    q.bindValue(":descr", descr);
+//    q.bindValue(":busy", busy);
+//    if (!q.exec()) {
+//        qDebug() << q.lastError() << "\n";
+//        return false;
+//    }
 //    emit updatedata();
-    return true;
+//    return true;
 }
 
 /*
@@ -451,7 +471,7 @@ void IPList::findFreeNetwork()
     uint size = 1 << (32-bits);
     uint min = 0;
     Node *mn = nullptr;
-    foreach (Node *n1, n->children) {
+    for (auto n1: n->children) {
         if (n1->data->net.size() < size || n1->data->busy == true)
             continue;
         if (min == 0 || min > n1->data->net.size()) {

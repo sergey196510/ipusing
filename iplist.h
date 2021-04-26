@@ -34,7 +34,7 @@ signals:
 
 private:
     IPListModel *iplm;
-    bool deleteNetwork(const Node *n);
+//    bool deleteNetwork(const Node *n);
     bool calc_networks(const pair<IPAddress,IPAddress> &, const uint parent);
     bool write_network(IPNetwork &, const uint parent, const QString &descr, const int busy);
     bool delete_network(const uint id);
@@ -44,7 +44,7 @@ private:
 
 private slots:
     void addFreeNetwork();
-    void delFreeNetwork();
+//    void delFreeNetwork();
     void addUsedNetwork();
     void delUsedNetwork();
     void findFreeNetwork();
