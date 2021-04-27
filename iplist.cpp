@@ -172,7 +172,7 @@ pair<IPAddress,IPAddress> IPList::find_network(const Node *n, IPNetwork &myNet)
     pair<IPAddress, IPAddress> pr;
     IPNetwork net;
 
-    for (Node *n1: n->children) {
+    for (auto n1: n->children) {
         if (n1->data->net.Contain(myNet)) {
             if (n1->data->busy == false) {
                 pr.first = n1->data->net.Network();
@@ -219,7 +219,7 @@ void IPList::addUsedNetwork()
     uint parent;
     pair<IPAddress,IPAddress> pr;
 
-    Node *n = get_current();
+    auto n = get_current();
     if (n == nullptr)
         return;
 
@@ -302,11 +302,11 @@ void IPList::delUsedNetwork()
 //    IPAddress firstAddress, lastAddress;
     Transaction tr;
 
-    Node *n = get_current();
+    auto n = get_current();
     if (n == nullptr)
         return;
 
-    Node *p = n->parent;
+    auto p = n->parent;
 
     if (n->data->busy == false) {
         QMessageBox::critical(this,
@@ -459,7 +459,8 @@ bool IPList::delete_network(const uint id)
 
 void IPList::findFreeNetwork()
 {
-    Node *n = get_current();
+//    Node *n = get_current();
+    auto n = get_current();
     if (n == nullptr)
         return;
 
@@ -512,7 +513,7 @@ void IPList::findFreeNetwork()
 
 void IPList::updateDescription()
 {
-    Node *n = get_current();
+    auto n = get_current();
     if (n == nullptr)
         return;
 
