@@ -20,6 +20,11 @@ void editBusyNetwork::setNetwork(const QString &str)
     ui->networkEdit->setText(str);
 }
 
+void editBusyNetwork::setNetwork(IPNetwork &str)
+{
+    ui->networkEdit->setText(str.toString().c_str());
+}
+
 void editBusyNetwork::setDescription(const QString &str)
 {
     ui->descrEdit->setText(str);

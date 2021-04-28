@@ -48,6 +48,7 @@ private slots:
     void delUsedNetwork();
     void findFreeNetwork();
     void updateDescription();
+    void updateSelection();
 };
 
 #endif // IPLIST_H

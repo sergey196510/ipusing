@@ -16,6 +16,7 @@ public:
     explicit editBusyNetwork(QWidget *parent = nullptr);
     ~editBusyNetwork();
     void setNetwork(const QString &str);
+    void setNetwork(IPNetwork &str);
     void setDescription(const QString &str);
     QString Network();
     QString Description();
